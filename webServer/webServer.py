@@ -1,30 +1,28 @@
-from http.server import HTTPServer, BaseHTTPRequestHandler
-import os, sys
+from socket import *
+import sys
+serverSocket = socket(AF_INET, SOCK_STREAM)
+serverSocket.bind(('153.33.133.200', 8000))
+serverSocket.listen(5)
+
+while True:
+    try:
+        clientSocket, address = serverSocket.accept()
+        print(f'Connection from {address} has been established')
+        message = clientSocket.recv(1024).decode()
+        filename = message.split()[1].partition('/')[2]
+        f = open(filename)
+        outputData = f.read()
+        clientSocket.send('HTTP/1.1 200 OK\r\n\r\n'.encode())
+        for i in range(0, len(outputData)):
+            clientSocket.send(outputData[i].encode())
+        clientSocket.send('\r\n'.encode())
+        clientSocket.close()
+    except IOError:
+        clientSocket.send('HTTP/1.1 404 Not Found\r\n\r\n'.encode())
+        clientSocket.send('404 File Not Found'.encode())
+        clientSocket.send('\r\n'.encode())
+        clientSocket.close()
 
 
-class helloHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        request = self.path[1:]
-        if request == 'HelloWorld.html':
-            self.send_response(200)
-            self.send_header('content-type', 'text/html')
-            self.end_headers()
-            with open(os.path.join(sys.path[0], 'HelloWorld.html'), 'r') as f:
-                self.wfile.write(f.read().encode())
-        else:
-            self.send_response(404)
-            self.send_header('content-type', 'text/html')
-            self.end_headers()
-            self.wfile.write('404 file not found'.encode())
-
-
-def main():
-    PORT = 8000
-    HOST = '153.33.133.200'
-    server = HTTPServer((HOST, PORT), helloHandler)
-    print('Server Running on port %s' % PORT)
-    server.serve_forever()
-
-
-if __name__ == '__main__':
-    main()
+serverSocket.close()
+sys.exit()
